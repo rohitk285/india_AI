@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: kyc_db
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 5
+
+  kyc_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: kyc_backend
+    container_name: kyc_backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/kyc_db?replicaSet=rs0
+    depends_on:
+      - mongo
+      - ner
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - kyc_backend
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+
+  ner:
+    build:
+      context: ./NER
+      dockerfile: Dockerfile
+    container_name: ner
+    image: ner_service
+    ports:
+      - "5000:5000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_URL=${GEMINI_API_URL}
+    # optional: add a simple healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/" ]
+      interval: 10s
+      retries: 3
+
+volumes:
+  mongo-data:

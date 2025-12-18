@@ -1,0 +1,3 @@
+target/
+src/main/resources/keys
+src/main/resources/Application.properties
