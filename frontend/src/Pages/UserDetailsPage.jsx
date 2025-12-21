@@ -31,6 +31,7 @@ const UserDetailsPage = () => {
           user_id: user_id,
         }
       );
+      console.log("User details fetched:", response.data);
       setUser(response.data);
     } catch (err) {
       console.error("Cannot fetch user details", err);
@@ -43,7 +44,7 @@ const UserDetailsPage = () => {
         "http://localhost:8080/api/customerDetailsLinks",
         {
           cust_id: cust_id,
-          document_type: user.document_type
+          document_type: user.document_type,
         }
       );
       setLinks(response.data);
@@ -92,113 +93,81 @@ const UserDetailsPage = () => {
         }}
       >
         <CardContent>
-          <Grid container spacing={3}>
-            {/* Named Entities */}
-            {user.entities && (
-              <>
-                {Object.keys(user.entities).map((entityKey, index) => (
-                  <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    key={entityKey}
-                    sx={{
-                      display: "flex",
-                      flexDirection: index % 2 === 0 ? "row" : "row-reverse",
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: "bold",
-                          color: "#FF5722",
-                          marginBottom: 1,
-                        }}
-                      >
-                        {entityKey}:
-                      </Typography>
-                      {Array.isArray(user.entities[entityKey]) ? (
-                        <List
-                          sx={{
-                            backgroundColor: "#eeeeee",
-                            padding: "10px",
-                            borderRadius: "8px",
-                          }}
-                        >
-                          {user.entities[entityKey].map((item, index) => (
-                            <ListItem key={index}>
-                              <ListItemText
-                                primary={item}
-                                primaryTypographyProps={{
-                                  sx: { fontWeight: "bold", color: "#000000" },
-                                }}
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
-                      ) : (
+          <Grid container spacing={4}>
+            {Array.isArray(user) &&
+              user.map((doc, index) => {
+                const { document_type, ...fields } = doc;
+
+                return (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Card
+                      sx={{
+                        height: "100%",
+                        borderRadius: 3,
+                        boxShadow: "0 6px 16px rgba(0,0,0,0.1)",
+                        backgroundColor: "#fafafa",
+                      }}
+                    >
+                      <CardContent>
+                        {/* Document Type Header */}
                         <Typography
-                          variant="body1"
+                          variant="h6"
                           sx={{
                             fontWeight: "bold",
-                            color: "#000000",
-                            fontFamily: "Nunito",
-                            fontSize: "20px",
+                            mb: 2,
+                            color: "#FF5722",
+                            textTransform: "uppercase",
+                            borderBottom: "2px solid #FF5722",
+                            pb: 1,
                           }}
                         >
-                          {user.entities[entityKey]}
+                          {document_type || "Document"}
                         </Typography>
-                      )}
-                    </Box>
-                  </Grid>
-                ))}
-              </>
-            )}
 
-            {/* Related Documents */}
-            {user.document_type && (
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: "bold", color: "#FF5722" }}
-                >
-                  Related Documents:
-                </Typography>
-                <List>
-                  {links.map((docObj, index) => {
-                    const docType = Object.keys(docObj)[0];
-                    const docInfo = docObj[docType];
-
-                    return (
-                      <ListItem key={index}>
-                        <ListItemText
-                          primary={docType}
-                          secondary={
-                            docInfo?.fileLink ? (
-                              <Link
-                                href={docInfo.fileLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                        {/* Fields */}
+                        <Grid container spacing={2}>
+                          {Object.entries(fields).map(([key, value]) => (
+                            <Grid item xs={12} key={key}>
+                              <Box
                                 sx={{
-                                  color: "#FF5722",
-                                  fontWeight: "bold",
-                                  textDecoration: "underline",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  backgroundColor: "#ffffff",
+                                  padding: "10px 14px",
+                                  borderRadius: 2,
+                                  boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
                                 }}
                               >
-                                Click here to view
-                              </Link>
-                            ) : (
-                              "No document available"
-                            )
-                          }
-                        />
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Grid>
-            )}
+                                <Typography
+                                  sx={{
+                                    fontWeight: 600,
+                                    color: "#555",
+                                    textTransform: "capitalize",
+                                  }}
+                                >
+                                  {key.replace(/_/g, " ")}
+                                </Typography>
+
+                                <Typography
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: "#000",
+                                    maxWidth: "60%",
+                                    textAlign: "right",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {value ?? "—"}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
           </Grid>
         </CardContent>
       </Card>

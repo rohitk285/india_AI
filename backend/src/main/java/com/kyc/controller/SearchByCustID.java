@@ -28,7 +28,6 @@ public class SearchByCustID {
             String user_id = bodyReq.get("user_id");
 
             try (var mongoClient = MongoClients.create(mongoUriString)) {
-                // ensures consistency of data that is read and returned
                 MongoDatabase database = mongoClient.getDatabase("kyc_db");
                 
                 MongoCollection<Document> collection = database.getCollection("document");

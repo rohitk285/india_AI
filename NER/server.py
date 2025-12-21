@@ -3,7 +3,9 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from io import BytesIO
-from text_ext import process_file_with_gemini
+
+# ✅ IMPORT FROM ocr.py
+from ocr import process_pdf
 
 app = Flask(__name__)
 CORS(app)
@@ -17,38 +19,45 @@ def test():
 @app.route('/uploadDetails', methods=['POST'])
 def upload_details():
     try:
-        files = request.files
+        files = request.files.getlist("file")
+        document_types = request.form.getlist("document_type")
+
         if not files:
             return jsonify({"error": "No files uploaded."}), 400
 
-        document_outputs = []
+        if len(files) != len(document_types):
+            return jsonify({
+                "error": "Each file must have a corresponding document_type"
+            }), 400
 
-        for file_key, file in files.items():
-            # Read file content in memory
+        extracted_entities_list = []
+
+        for idx, file in enumerate(files):
             file_stream = BytesIO(file.read())
 
-            # Process file
-            document_data = process_file_with_gemini(file_stream, file.filename)
-            if not document_data:
-                return jsonify({"error": f"Failed to process document: {file.filename}"}), 500
+            # ✅ Document type bound PER FILE
+            document_type = document_types[idx]
 
-            document_outputs.append(document_data)
+            result = process_pdf(
+                file_stream=file_stream,
+                document_type=document_type,
+                confidence_threshold=0.70
+            )
 
-        # Flatten output if multiple files
-        extracted_entries = []
-        for doc_data in document_outputs:
-            if isinstance(doc_data, list):
-                extracted_entries.extend(doc_data)
-            else:
-                extracted_entries.append(doc_data)
+            if not result or "extracted_entities" not in result:
+                return jsonify({
+                    "error": f"Failed to extract entities from {file.filename}"
+                }), 500
 
-        if not extracted_entries:
-            return jsonify({"error": "No data extracted from uploaded documents."}), 500
+            entities = result["extracted_entities"]
 
-        # Return JSON output for Spring Boot controller
+            # ✅ Inject correct document_type
+            entities["document_type"] = document_type
+
+            extracted_entities_list.append(entities)
+
         return jsonify({
-            "extracted_data": extracted_entries,
-            "uploaded_files": {}  # empty because Drive upload is handled by Spring Boot
+            "extracted_entities": extracted_entities_list
         }), 200
 
     except Exception as e:

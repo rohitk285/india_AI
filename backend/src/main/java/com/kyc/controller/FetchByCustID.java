@@ -5,7 +5,6 @@ import org.bson.Document;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
-import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -27,8 +26,6 @@ public class FetchByCustID {
             String userId = bodyReq.get("user_id");
 
             try (var mongoClient = MongoClients.create(mongoUriString)) {
-                // ReadConcern - returns data that has been ACK by the majority of replica set
-                // ensures consistency of data that is read and returned
                 MongoDatabase database = mongoClient.getDatabase("kyc_db");
 
                 MongoCollection<Document> collection = database.getCollection("document");
@@ -43,32 +40,41 @@ public class FetchByCustID {
                 }
 
                 if (result.containsKey("entities")) {
-                    Document entitiesDoc = (Document) result.get("entities");
-                    Document decryptedEntities = new Document();
+                    List<Document> encryptedEntities = (List<Document>) result.get("entities");
+                    List<Map<String, Object>> decryptedEntities = new ArrayList<>();
 
-                    for (String key : entitiesDoc.keySet()) {
-                        Object field = entitiesDoc.get(key);
+                    for(Document encryptedEntity: encryptedEntities) {
+                        Map<String, Object> decryptedEntity = new HashMap<>();
 
-                        if (field instanceof Document encryptedField) {
-                            String iv = encryptedField.getString("iv");
-                            String cipherText = encryptedField.getString("cipherText");
+                        for (Map.Entry<String, Object> entry : encryptedEntity.entrySet()) {
+                            String key = entry.getKey();
+                            Object value = entry.getValue();
 
-                            if (iv != null && cipherText != null) {
-                                Map<String, String> map = Map.of("iv", iv, "cipherText", cipherText);
-                                String decryptedValue = EncryptionUtil.decryptWithIV(map);
-                                decryptedEntities.put(key, decryptedValue);
-                            } else {
-                                decryptedEntities.put(key, field.toString());
+                            if(value instanceof Document encryptedField){
+                                String iv = encryptedField.getString("iv");
+                                String cipherText = encryptedField.getString("cipherText");
+                                if(iv != null && cipherText != null){
+                                    Map<String, String> encryptedMap = Map.of(
+                                            "iv", iv,
+                                            "cipherText", cipherText
+                                    );
+                                    String decryptedValue = EncryptionUtil.decryptWithIV(encryptedMap);
+                                    decryptedEntity.put(key, decryptedValue);
+                                } else {
+                                    decryptedEntity.put(key, value.toString());
+                                }
                             }
-                        } else {
-                            decryptedEntities.put(key, field.toString());
+                            else{
+                                decryptedEntity.put(key, value);
+                            }
                         }
+                        decryptedEntities.add(decryptedEntity);
                     }
-
                     result.put("entities", decryptedEntities);
                 }
 
-                return ResponseEntity.ok(result);
+                List<Map<String, Object>> returnResult = (List<Map<String, Object>>) result.get("entities");
+                return ResponseEntity.ok(returnResult);
             }
         } catch (Exception e) {
             e.printStackTrace();

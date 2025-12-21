@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.data.mongodb.core.index.Indexed;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Document(collection="document")
 public class DocumentModel {
@@ -21,8 +20,7 @@ public class DocumentModel {
     @Indexed
     private String name;
     
-    private List<String> document_type;
-    private Map<String, Object> entities;
+    private List<Map<String, Object>> entities;
 
     @NotBlank(message = "user_id must not be blank")
     @Indexed
@@ -30,9 +28,8 @@ public class DocumentModel {
 
     public DocumentModel() {}
 
-    public DocumentModel(String name, List<String> document_type, Map<String, Object> entities, String user_id) {
+    public DocumentModel(String name, List<Map<String, Object>> entities, String user_id) {
         this.name = name;
-        this.document_type = document_type;
         this.entities = entities;
         this.user_id = user_id;
     }
@@ -53,19 +50,11 @@ public class DocumentModel {
         this.name = name;
     }
 
-    public List<String> getDocument_type() {
-        return document_type;
-    }
-
-    public void setDocument_type(List<String> document_type) {
-        this.document_type = document_type;
-    }
-
-    public Map<String, Object> getEntities() {
+    public List<Map<String, Object>> getEntities() {
         return entities;
     }
 
-    public void setEntities(Map<String, Object> entities) {
+    public void setEntities(List<Map<String, Object>> entities) {
         this.entities = entities;
     }
     public String getUser_id(){

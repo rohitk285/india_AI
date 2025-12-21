@@ -9,8 +9,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.core.ParameterizedTypeReference;
 
-import org.springframework.beans.factory.annotation.Value;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.*;
@@ -19,37 +17,49 @@ import java.util.*;
 @RequestMapping("/api")
 public class ExtractDetails {
 
-    @Value("${spring.data.mongodb.uri}")
-    private String mongoUriString;
-
     @PostMapping("/details")
-    public ResponseEntity<?> extractOnly(@RequestParam("file") MultipartFile[] files) {
+    public ResponseEntity<?> extractOnly(
+            @RequestParam("file") MultipartFile[] files,
+            @RequestParam("document_type") String[] documentTypes) {
         try {
-            List<Map<String, Object>> extractedResults = new ArrayList<>();
-            for (MultipartFile file : files) {
-                byte[] fileBytes = file.getBytes();
-                InputStream flaskStream = new ByteArrayInputStream(fileBytes);
+            List<Object> allExtractedEntities = new ArrayList<>();
+            RestTemplate restTemplate = new RestTemplate();
+
+            for (int i = 0; i < files.length; i++) {
+
+                MultipartFile file = files[i];
+                String documentType = documentTypes[i];
+
+                InputStream flaskStream = new ByteArrayInputStream(file.getBytes());
+
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                body.add("file", new MultipartInputStreamFileResource(flaskStream, file.getOriginalFilename()));
+                body.add("file", new MultipartInputStreamFileResource(
+                        flaskStream, file.getOriginalFilename()));
+                body.add("document_type", documentType);
+
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
                 HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-                RestTemplate restTemplate = new RestTemplate();
+
                 ResponseEntity<Map<String, Object>> flaskResponse = restTemplate.exchange(
                         "http://localhost:5000/uploadDetails",
                         HttpMethod.POST,
                         requestEntity,
                         new ParameterizedTypeReference<>() {
                         });
-                if (flaskResponse.getStatusCode() != HttpStatus.OK || flaskResponse.getBody() == null) {
-                    return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                            .body(Map.of("status", "error", "message", "Flask server error"));
-                }
-                extractedResults.add(flaskResponse.getBody());
+
+                allExtractedEntities.addAll(
+                        (List<?>) flaskResponse.getBody().get("extracted_entities"));
             }
-            return ResponseEntity.ok(Map.of("status", "success", "data", extractedResults));
+            // System.out.println("Extracted Entities: " + allExtractedEntities);
+            return ResponseEntity.ok(
+                    Map.of("status", "success", "data", allExtractedEntities));
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("status", "error", "message", e.getMessage()));
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
+
 }

@@ -30,11 +30,12 @@ const ConfirmDetailsPage = () => {
   const navigate = useNavigate();
   const custId = location.state?.cust_id || null;
   const uploadedFiles = location.state?.uploadedFiles || [];
-  const initialDocs =
-    location.state?.extractedData?.flatMap((item) => item.extracted_data) || [];
+  const documentsFromBackend = location.state?.extractedData || [];
 
   const [documents, setDocuments] = useState(
-    initialDocs.map((doc) => ({ ...doc, extraFields: [] }))
+    documentsFromBackend.map((doc) => ({
+      fields: { ...doc }, // flat key-value object
+    }))
   );
 
   const [loading, setLoading] = useState(false);
@@ -43,32 +44,12 @@ const ConfirmDetailsPage = () => {
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
   const user_id = useContext(AuthContext).userId;
-
+  console.log(documentsFromBackend);
   const [resultModal, setResultModal] = useState({
     open: false,
     success: true,
     message: "",
   });
-
-  useEffect(() => {
-    const nameValues = documents
-      .map(
-        (doc) =>
-          doc.named_entities?.name?.trim() ??
-          doc.extraFields.find((f) => f.key.toLowerCase() === "name")?.value?.trim()
-      )
-      .filter((v) => v !== undefined);
-
-    if (nameValues.length > 1 && new Set(nameValues).size > 1) {
-      setResultModal({
-        open: true,
-        success: false,
-        message:
-          '"Name" field has inconsistent values across documents. Please review before saving!',
-        type: "inconsistency",
-      });
-    }
-  }, [documents]);
 
   const handleFieldChange = (docIndex, field, value, isExtra = false) => {
     const updated = [...documents];
@@ -90,43 +71,13 @@ const ConfirmDetailsPage = () => {
   };
 
   const handleAddField = () => {
-    if (!newFieldKey.trim()) {
-      setResultModal({
-        open: true,
-        success: false,
-        message: "Field name cannot be empty!",
-        type: "fieldEmpty",
-      });
-      return;
-    }
-
-    const existsInDoc =
-      documents[modalDocIndex].named_entities?.[newFieldKey] ||
-      documents[modalDocIndex].extraFields.some((f) => f.key === newFieldKey);
-
-    if (existsInDoc) {
-      setResultModal({
-        open: true,
-        success: false,
-        message: "Field already exists in this document!",
-        type: "fieldExist",
-      });
-      return;
-    }
+    if (!newFieldKey.trim()) return;
 
     const updated = [...documents];
-    updated[modalDocIndex].extraFields.push({
-      key: newFieldKey,
-      value: newFieldValue,
-    });
+    updated[modalDocIndex].fields[newFieldKey] = newFieldValue;
+
     setDocuments(updated);
     setModalOpen(false);
-    setResultModal({
-      open: true,
-      success: true,
-      message: "Field added successfully!",
-      type: "add",
-    });
   };
 
   const handleDeleteField = (docIndex, keyOrIndex, isExtra = false) => {
@@ -139,81 +90,29 @@ const ConfirmDetailsPage = () => {
     setDocuments(updated);
   };
 
-  // ✅ FIXED: Pass extraFields properly to secondary page
+  // ✅ FIXED: Pas  s extraFields properly to secondary page
   const handleConfirm = () => {
-    if (documents.length <= 1) {
-      handleSave();
-      return;
-    }
-
-    const allKeys = new Set();
-    documents.forEach((doc) => {
-      Object.keys(doc.named_entities || {}).forEach((k) => allKeys.add(k.trim()));
-      doc.extraFields?.forEach((f) => allKeys.add(f.key.trim()));
-    });
-
-    const mergedFields = {};
-    const conflictingFields = new Set();
-
-    allKeys.forEach((key) => {
-      const values = documents.map((doc) => {
-        const val =
-          doc.named_entities?.[key] ??
-          doc.extraFields?.find((f) => f.key === key)?.value ??
-          "";
-        return val?.trim() ?? "";
-      });
-      const uniqueValues = Array.from(new Set(values));
-      if (uniqueValues.length === 1) {
-        mergedFields[key] = uniqueValues[0];
-      } else {
-        conflictingFields.add(key);
-      }
-    });
-
-    if (conflictingFields.size > 0) {
-      navigate("/secondaryConfirm", {
-        state: {
-          documents: documents.map((doc) => ({
-            ...doc,
-            named_entities: { ...doc.named_entities },
-            extraFields: doc.extraFields ? [...doc.extraFields] : [],
-          })),
-          uploadedFiles,
-          custId,
-        },
-      });
-    } else {
-      handleSave();
-    }
+    handleSave();
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
+
       const endpoint = custId
         ? "http://localhost:8080/api/saveDetailsExisting"
         : "http://localhost:8080/api/saveDetails";
 
       const formData = new FormData();
-      uploadedFiles.forEach((file) => formData.append("files", file));
 
-      const finalDocs = documents.map((doc) => {
-        const merged = { ...doc.named_entities };
-        doc.extraFields.forEach((f) => {
-          if (f.key.trim()) merged[f.key] = f.value;
-        });
-        const baseDocs = {
-          ...doc,
-          named_entities: merged,
-          extraFields: undefined,
-        };
-        if (custId) baseDocs.cust_id = custId;
-        return baseDocs;
-      });
+      const entitiesPayload = documents.map((doc) => doc.fields);
 
-      formData.append("documents", JSON.stringify(finalDocs));
+      formData.append("entities", JSON.stringify(entitiesPayload));
       formData.append("user_id", user_id);
+
+      if (custId) {
+        formData.append("cust_id", custId);
+      }
 
       const response = await axios.post(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -305,7 +204,10 @@ const ConfirmDetailsPage = () => {
 
       {uploadedFiles.length > 0 && (
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "#444" }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 1, fontWeight: "bold", color: "#444" }}
+          >
             Uploaded Files:
           </Typography>
           <ul>
@@ -319,9 +221,8 @@ const ConfirmDetailsPage = () => {
       )}
 
       {documents.map((doc, index) => {
-        const docType = Array.isArray(doc.document_type)
-          ? doc.document_type.join(", ")
-          : doc.document_type || "Unknown";
+        const fields = doc.fields;
+        const docType = fields.document_type || "Unknown";
 
         return (
           <Paper
@@ -331,7 +232,6 @@ const ConfirmDetailsPage = () => {
               padding: 3,
               borderRadius: 2,
               backgroundColor: "#ffffff",
-              boxShadow: "0px 4px 10px rgba(0,0,0,0.1)",
               marginBottom: 4,
             }}
           >
@@ -343,68 +243,18 @@ const ConfirmDetailsPage = () => {
             </Typography>
 
             <Grid container spacing={2}>
-              {Object.entries(doc.named_entities || {}).map(([key, value], i) => (
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                  key={`original-${i}`}
-                  sx={{ display: "flex", alignItems: "center" }}
-                >
+              {Object.entries(fields).map(([key, value]) => (
+                <Grid item xs={12} sm={6} key={key}>
                   <TextField
-                    label={key}
-                    value={value}
-                    onChange={(e) =>
-                      handleFieldChange(index, key, e.target.value)
-                    }
-                    fullWidth
-                    variant="outlined"
-                    sx={{
-                      "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
+                    label={key.replace(/_/g, " ")}
+                    value={value ?? ""}
+                    onChange={(e) => {
+                      const updated = [...documents];
+                      updated[index].fields[key] = e.target.value;
+                      setDocuments(updated);
                     }}
-                  />
-                  <IconButton
-                    onClick={() => handleDeleteField(index, key)}
-                    color="error"
-                    sx={{ ml: 1 }}
-                  >
-                    <Delete />
-                  </IconButton>
-                </Grid>
-              ))}
-
-              {doc.extraFields.map((field, i) => (
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                  key={`extra-${i}`}
-                  sx={{ display: "flex", alignItems: "center" }}
-                >
-                  <TextField
-                    label={field.key}
-                    value={field.value}
-                    onChange={(e) =>
-                      handleFieldChange(
-                        index,
-                        { index: i, keyOrValue: "value" },
-                        e.target.value,
-                        true
-                      )
-                    }
                     fullWidth
-                    variant="outlined"
-                    sx={{
-                      "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
-                    }}
                   />
-                  <IconButton
-                    onClick={() => handleDeleteField(index, i, true)}
-                    color="error"
-                    sx={{ ml: 1 }}
-                  >
-                    <Delete />
-                  </IconButton>
                 </Grid>
               ))}
             </Grid>

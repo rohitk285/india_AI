@@ -36,17 +36,31 @@ const UploadPage = () => {
   const user_id = useContext(AuthContext).userId;
   const isMobile = useMediaQuery("(max-width: 600px)");
 
+  const DOCUMENT_TYPES = [
+    "PAN Card",
+    "Aadhaar Card",
+    "Driving license",
+    "Passport",
+    "Voter ID",
+    "Diploma",
+    "Transcript",
+  ];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
   const handleFileChange = (e) => {
-    const { files } = e.target;
-    setFormData({
-      ...formData,
-      files: [...formData.files, ...Array.from(files)],
-    });
+    const selectedFiles = Array.from(e.target.files).map((file) => ({
+      file,
+      documentType: "", // user will choose
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      files: [...prev.files, ...selectedFiles],
+    }));
   };
 
   const handleCustomerType = (event, newType) => {
@@ -109,9 +123,22 @@ const UploadPage = () => {
       }
 
       const formDataToSend = new FormData();
-      formData.files.forEach((file) => formDataToSend.append("file", file));
+      formData.files.forEach((item) => {
+        formDataToSend.append("file", item.file);
+        formDataToSend.append("document_type", item.documentType);
+      });
       if (customerType === "existing") {
         formDataToSend.append("cust_id", formData.cust_id);
+      }
+
+      const missingType = formData.files.some((f) => !f.documentType);
+      if (missingType) {
+        setAlert({
+          open: true,
+          success: false,
+          message: "Please select document type for all files",
+        });
+        return;
       }
 
       const response = await fetch("http://localhost:8080/api/details", {
@@ -119,7 +146,7 @@ const UploadPage = () => {
         body: formDataToSend,
       });
       const result = await response.json();
-
+      
       if (response.ok) {
         navigate("/confirm-details", {
           state: {
@@ -240,9 +267,7 @@ const UploadPage = () => {
                 fullWidth
                 options={suggestions || []}
                 getOptionLabel={(opt) =>
-                  typeof opt === "string"
-                    ? opt
-                    : `${opt.cust_id}`
+                  typeof opt === "string" ? opt : `${opt.cust_id}`
                 }
                 loading={loadingSuggestions}
                 onInputChange={(e, val) => {
@@ -334,7 +359,7 @@ const UploadPage = () => {
           >
             <CloudUpload sx={{ fontSize: 48, color: "#FE8D01" }} />
             <Typography sx={{ mt: 1, color: "#fff" }}>
-              Click or drag files to upload (PDF , JPEG , JPG   , PNG)
+              Click or drag files to upload (PDF , JPEG , JPG , PNG)
             </Typography>
             <input
               type="file"
@@ -357,33 +382,58 @@ const UploadPage = () => {
                 justifyContent: "center",
               }}
             >
-              {formData.files.map((file, i) => (
+              {formData.files.map((item, i) => (
                 <Box
                   key={i}
                   sx={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
+                    flexDirection: "column",
+                    gap: 1,
                     backgroundColor: "rgba(255,255,255,0.15)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "20px",
-                    px: 1.5,
-                    py: 0.5,
-                    color: "#fff",
-                    fontSize: "13px",
-                    fontFamily: "monospace",
+                    borderRadius: "15px",
+                    p: 1.5,
+                    minWidth: "250px",
                   }}
                 >
                   <Typography
                     sx={{
-                      maxWidth: "120px",
+                      fontFamily: "monospace",
+                      fontSize: "13px",
+                      color: "#fff",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {file.name}
+                    {item.file.name}
                   </Typography>
+
+                  {/* Document Type Dropdown */}
+                  <TextField
+                    select
+                    label="Document Type"
+                    size="small"
+                    value={item.documentType}
+                    onChange={(e) => {
+                      const updated = [...formData.files];
+                      updated[i].documentType = e.target.value;
+                      setFormData({ ...formData, files: updated });
+                    }}
+                    sx={{
+                      backgroundColor: "#fff",
+                      borderRadius: 1,
+                    }}
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="">Select type</option>
+                    {DOCUMENT_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </TextField>
+
+                  {/* Remove button */}
                   <Button
                     onClick={() =>
                       setFormData({
@@ -392,14 +442,12 @@ const UploadPage = () => {
                       })
                     }
                     sx={{
-                      color: "#fff",
-                      minWidth: "0",
-                      p: 0,
-                      fontSize: "14px",
-                      "&:hover": { color: "#FE8D01" },
+                      color: "#FE8D01",
+                      fontSize: "12px",
+                      alignSelf: "flex-end",
                     }}
                   >
-                    ✕
+                    Remove
                   </Button>
                 </Box>
               ))}
