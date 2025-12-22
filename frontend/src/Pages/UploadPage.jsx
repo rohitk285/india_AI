@@ -47,7 +47,6 @@ const UploadPage = () => {
     "Transcript",
     "Affidavit",
     "Bank Statement",
-    "Transcript",
   ];
 
   const handleChange = (e) => {
