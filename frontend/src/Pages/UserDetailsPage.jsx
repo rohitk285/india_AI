@@ -31,7 +31,6 @@ const UserDetailsPage = () => {
           user_id: user_id,
         }
       );
-      console.log("User details fetched:", response.data);
       setUser(response.data);
     } catch (err) {
       console.error("Cannot fetch user details", err);

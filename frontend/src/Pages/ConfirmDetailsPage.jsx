@@ -43,8 +43,8 @@ const ConfirmDetailsPage = () => {
   const [modalDocIndex, setModalDocIndex] = useState(null);
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
+  const [nameConflictOpen, setNameConflictOpen] = useState(false);
   const user_id = useContext(AuthContext).userId;
-  console.log(documentsFromBackend);
   const [resultModal, setResultModal] = useState({
     open: false,
     success: true,
@@ -90,8 +90,20 @@ const ConfirmDetailsPage = () => {
     setDocuments(updated);
   };
 
-  // ✅ FIXED: Pas  s extraFields properly to secondary page
+  const hasNameConflict = () => {
+    const names = documents
+      .map((doc) => doc.fields?.name)
+      .filter(Boolean)
+      .map((n) => n.trim().toLowerCase());
+
+    return new Set(names).size > 1;
+  };
+
   const handleConfirm = () => {
+    if (hasNameConflict()) {
+      setNameConflictOpen(true);
+      return;
+    }
     handleSave();
   };
 
@@ -306,6 +318,41 @@ const ConfirmDetailsPage = () => {
           <Button onClick={() => setModalOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleAddField}>
             Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Name Conflict Warning Dialog */}
+      <Dialog
+        open={nameConflictOpen}
+        onClose={() => setNameConflictOpen(false)}
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmber sx={{ color: "#FF9800" }} />
+          Name Conflict Detected
+        </DialogTitle>
+
+        <DialogContent>
+          <Typography>
+            The <strong>name</strong> field differs across uploaded documents.
+            <br />
+            <br />
+            Please ensure this is correct before continuing.
+          </Typography>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setNameConflictOpen(false)}>Review</Button>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setNameConflictOpen(false);
+              handleSave(); // user confirms
+            }}
+          >
+            Continue Anyway
           </Button>
         </DialogActions>
       </Dialog>

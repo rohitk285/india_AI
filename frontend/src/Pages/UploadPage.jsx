@@ -17,6 +17,7 @@ import { CloudUpload, CheckCircle, Cancel } from "@mui/icons-material";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
+import { MenuItem } from "@mui/material";
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -43,6 +44,9 @@ const UploadPage = () => {
     "Passport",
     "Voter ID",
     "Diploma",
+    "Transcript",
+    "Affidavit",
+    "Bank Statement",
     "Transcript",
   ];
 
@@ -146,7 +150,7 @@ const UploadPage = () => {
         body: formDataToSend,
       });
       const result = await response.json();
-      
+
       if (response.ok) {
         navigate("/confirm-details", {
           state: {
@@ -412,24 +416,31 @@ const UploadPage = () => {
                   <TextField
                     select
                     label="Document Type"
-                    size="small"
                     value={item.documentType}
                     onChange={(e) => {
                       const updated = [...formData.files];
                       updated[i].documentType = e.target.value;
                       setFormData({ ...formData, files: updated });
                     }}
+                    fullWidth
+                    size="small"
                     sx={{
                       backgroundColor: "#fff",
-                      borderRadius: 1,
+                      borderRadius: "10px",
+                      "& .MuiSelect-select": {
+                        padding: "10px",
+                        fontSize: "14px",
+                      },
                     }}
-                    SelectProps={{ native: true }}
                   >
-                    <option value="">Select type</option>
+                    <MenuItem value="">
+                      <em>Select document type</em>
+                    </MenuItem>
+
                     {DOCUMENT_TYPES.map((type) => (
-                      <option key={type} value={type}>
+                      <MenuItem key={type} value={type}>
                         {type}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
 

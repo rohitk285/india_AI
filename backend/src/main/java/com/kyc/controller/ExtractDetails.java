@@ -52,7 +52,7 @@ public class ExtractDetails {
                 allExtractedEntities.addAll(
                         (List<?>) flaskResponse.getBody().get("extracted_entities"));
             }
-            // System.out.println("Extracted Entities: " + allExtractedEntities);
+            
             return ResponseEntity.ok(
                     Map.of("status", "success", "data", allExtractedEntities));
 

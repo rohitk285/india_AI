@@ -31,7 +31,7 @@ function App() {
           <Route path="/confirm-details" element={<ProtectedRoute><ConfirmDetailsPage /></ProtectedRoute>} />
           <Route path="/updateDetails" element={<ProtectedRoute><UpdateDetails /></ProtectedRoute>} />
           <Route path="/user-details-update" element={<ProtectedRoute><UserDetailsUpdate /></ProtectedRoute>} />
-          <Route path="/secondaryConfirm" element={<ProtectedRoute><SecondaryConfirmPage /></ProtectedRoute>} />
+          <Route path="/secondary-confirm" element={<ProtectedRoute><SecondaryConfirmPage /></ProtectedRoute>} />
           <Route path="/uploadFingerprint" element={<ProtectedRoute><UploadFingerprintPage/></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>

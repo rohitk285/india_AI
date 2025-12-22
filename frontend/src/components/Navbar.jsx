@@ -57,7 +57,7 @@ const Navbar = () => {
             }}
             onClick={() => navigate("/")}
           >
-            KHR
+            India_AI
           </Typography>
 
           <Box>

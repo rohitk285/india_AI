@@ -96,6 +96,29 @@ def deskew_pil_image(pil_img):
         borderMode=cv2.BORDER_REPLICATE
     )
 
+def ensure_name_field(entities: dict):
+    """
+    Guarantees that:
+    - 'name' (lowercase) ALWAYS exists
+    """
+    if not isinstance(entities, dict):
+        return entities
+
+    name_value = None
+
+    # Collect any possible name variants
+    for key in list(entities.keys()):
+        normalized_key = key.strip().lower().replace(" ", "_")
+
+        if normalized_key == "name" or normalized_key == "full_name":
+            if name_value is None and entities.get(key):
+                name_value = entities[key]
+            entities.pop(key)
+
+    entities["name"] = name_value if name_value is not None else ""
+
+    return entities
+
 # ============================================================
 # PREPROCESS
 # ============================================================
@@ -164,11 +187,21 @@ def extract_entities_from_text(ocr_text, document_type):
     schema = ENTITY_SCHEMAS.get(document_type, {})
 
     prompt = f"""
-Extract ONLY the following fields from the text.
+You are extracting structured data from an official document.
+
+IMPORTANT RULES:
+- If the document contains fields like:
+  "Student Name", "Candidate Name", "Applicant Name",
+  "Name of the Student", "Name of Candidate"
+  → they MUST be mapped to the field "name".
+- The output MUST always contain "name".
+- If no name is found, return "name" as an empty string.
+- Do NOT create new keys.
+- Do NOT return explanations.
 
 Document type: {document_type}
 
-Return STRICT JSON:
+Return STRICT JSON in this exact format:
 {json.dumps(schema, indent=2)}
 
 TEXT:
@@ -190,11 +223,21 @@ def extract_entities_from_images(page_images, document_type):
     schema = ENTITY_SCHEMAS.get(document_type, {})
 
     prompt = f"""
-You are given scanned document images.
+You are given scanned official document images.
+
+IMPORTANT RULES:
+- If the document contains:
+  "Student Name", "Candidate Name", "Applicant Name",
+  "Name of the Student", "Name of Candidate"
+  → they MUST be returned as "name".
+- The output MUST always contain "name".
+- If no name is visible, return "name" as an empty string.
+- Give ALL RELEVANT FIELDS you can find. Do not skip any.
+- Do NOT create new keys/values.
 
 Document type: {document_type}
 
-Extract ONLY the following fields and return STRICT JSON:
+Return STRICT JSON in this exact format:
 {json.dumps(schema, indent=2)}
 """
 
@@ -211,7 +254,7 @@ Extract ONLY the following fields and return STRICT JSON:
 # FINAL ROUTER
 # ============================================================
 
-def process_pdf(file_stream, document_type, confidence_threshold=0.70):
+def process_pdf(file_stream, document_type, confidence_threshold=0.65):
     ocr_pages, page_images = process_pdf_with_easyocr(file_stream)
     doc_conf = compute_document_confidence(ocr_pages)
 
@@ -226,6 +269,8 @@ def process_pdf(file_stream, document_type, confidence_threshold=0.70):
     else:
         entities = extract_entities_from_images(page_images, document_type)
         source = "gemini_vision"
+
+    entities = ensure_name_field(entities)
 
     return {
         "source": source,

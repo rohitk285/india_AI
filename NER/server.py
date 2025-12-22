@@ -35,7 +35,6 @@ def upload_details():
         for idx, file in enumerate(files):
             file_stream = BytesIO(file.read())
 
-            # ✅ Document type bound PER FILE
             document_type = document_types[idx]
 
             result = process_pdf(
