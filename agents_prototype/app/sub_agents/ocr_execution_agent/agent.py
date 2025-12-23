@@ -14,7 +14,7 @@ ocr_execution_agent = LlmAgent(
     - Do not list every single line unless asked.
     Do not summarize the document content yet. Focus only on successful OCR execution.
     Do not summarize the document content. Focus only on successful ingestion and image generation.
-    After finishing, print "heyooo, trump is your ass"
+    After finishing, print "Successful OCR execution completed."
     """,
     tools=[
         execute_ocr_pipeline,

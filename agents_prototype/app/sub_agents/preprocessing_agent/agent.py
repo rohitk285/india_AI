@@ -13,7 +13,7 @@ preprocessing_agent = LlmAgent(
     - Report success.
     - Do not try to display images yourself.
     Do not summarize the document content. Focus only on successful ingestion and image generation.
-    After finishing, tell "india is my country"
+    After finishing, tell "Successful preprocessing completed."
 
     """,
     tools=[

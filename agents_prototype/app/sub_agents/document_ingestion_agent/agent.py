@@ -17,7 +17,7 @@ class DocumentIngestionAgent(BaseAgent):
     def __init__(self, name: str, pdf_to_images_tool):
         super().__init__(
             name=name,
-            sub_agents=[],  # no sub-agents, only tools
+            sub_agents=[],      # no sub-agents, only tools
         )
         self.pdf_to_images_tool = pdf_to_images_tool
 
