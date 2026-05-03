@@ -29,8 +29,9 @@ const UserDetailsPage = () => {
         {
           cust_id: cust_id,
           user_id: user_id,
-        }
+        },
       );
+      console.log("User details response:", response.data);
       setUser(response.data);
     } catch (err) {
       console.error("Cannot fetch user details", err);
@@ -40,20 +41,22 @@ const UserDetailsPage = () => {
   async function getLinks() {
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/customerDetailsLinks",
+        "http://localhost:8080/api/fetchLinksByCustID",
         {
           cust_id: cust_id,
-          document_type: user.document_type,
-        }
+          user_id: user_id,
+        },
       );
+      console.log("Links response:", response.data);
       setLinks(response.data);
     } catch (err) {
-      console.error("Cannot fetch user links", err);
+      console.error("Cannot fetch links", err);
     }
   }
 
   useEffect(() => {
     getUserDetails();
+    getLinks();
   }, []);
 
   useEffect(() => {
@@ -162,6 +165,32 @@ const UserDetailsPage = () => {
                             </Grid>
                           ))}
                         </Grid>
+
+                        {/* VIEW DOCUMENT BUTTON */}
+                        <Box sx={{ mt: 2 }}>
+                          {links[index] && (
+                            <Box
+                              onClick={() =>
+                                window.open(links[index], "_blank")
+                              }
+                              sx={{
+                                backgroundColor: "#FE8D01",
+                                color: "#fff",
+                                padding: "8px 14px",
+                                borderRadius: 2,
+                                display: "inline-block",
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                transition: "0.2s",
+                                "&:hover": {
+                                  backgroundColor: "#e67c00",
+                                },
+                              }}
+                            >
+                              Click here to view document
+                            </Box>
+                          )}
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>

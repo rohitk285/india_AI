@@ -121,6 +121,9 @@ const ConfirmDetailsPage = () => {
 
       formData.append("entities", JSON.stringify(entitiesPayload));
       formData.append("user_id", user_id);
+      uploadedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
 
       if (custId) {
         formData.append("cust_id", custId);

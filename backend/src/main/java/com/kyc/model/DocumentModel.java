@@ -26,6 +26,9 @@ public class DocumentModel {
     @Indexed
     private String user_id; // foreign key reference to UserModel.user_id - creating a reference in mongodb
 
+    @NotBlank(message = "fileLink must not be blank")
+    private List<String> fileLinks;
+
     public DocumentModel() {}
 
     public DocumentModel(String name, List<Map<String, Object>> entities, String user_id) {
