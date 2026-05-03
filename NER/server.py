@@ -38,7 +38,7 @@ def upload_details():
             result = process_pdf(
                 file_stream=file_stream,
                 document_type=document_type,
-                confidence_threshold=0.70
+                confidence_threshold=0.65
             )
 
             print(f"[SERVER] File: {file.filename} | Source: {result['source']} | Confidence: {result['document_confidence']}")
