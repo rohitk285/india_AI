@@ -259,6 +259,8 @@ def process_pdf(file_stream, document_type, confidence_threshold=0.65):
     doc_conf = compute_document_confidence(ocr_pages)
 
     if doc_conf >= confidence_threshold:
+        print(f"[INFO] OCR USED | Confidence: {doc_conf}")
+        
         text = "\n".join(
             line["text"]
             for page in ocr_pages
@@ -266,7 +268,10 @@ def process_pdf(file_stream, document_type, confidence_threshold=0.65):
         )
         entities = extract_entities_from_text(text, document_type)
         source = "ocr"
+
     else:
+        print(f"[INFO] GEMINI VISION USED | Confidence: {doc_conf}")
+        
         entities = extract_entities_from_images(page_images, document_type)
         source = "gemini_vision"
 

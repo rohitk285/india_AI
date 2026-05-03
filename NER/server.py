@@ -1,5 +1,3 @@
-# dbms lab project - automated KYC document processing API
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from io import BytesIO
@@ -42,6 +40,8 @@ def upload_details():
                 document_type=document_type,
                 confidence_threshold=0.70
             )
+
+            print(f"[SERVER] File: {file.filename} | Source: {result['source']} | Confidence: {result['document_confidence']}")
 
             if not result or "extracted_entities" not in result:
                 return jsonify({
